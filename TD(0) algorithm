@@ -1,0 +1,195 @@
+import numpy as np
+
+# Define the environment
+class Environment:
+    def __init__(self):
+        self.state = 0
+        self.num_states = 6
+        self.actions = [0, 1]  # Actions: 0 (move left), 1 (move right)
+
+    def reset(self):
+        self.state = 0
+
+    def step(self, action):
+        if action == 0:
+            self.state = max(0, self.state - 1)
+        elif action == 1:
+            self.state = min(self.num_states - 1, self.state + 1)
+
+        # Define rewards
+        if self.state == 0:
+            reward = -1
+            done = False
+        elif self.state == self.num_states - 1:
+            reward = 1
+            done = True
+        else:
+            reward = 0
+            done = False
+
+        return self.state, reward, done
+
+# Define TD(0) agent
+class TDAgent:
+    def __init__(self, num_states, num_actions, alpha=0.1, gamma=0.9):
+        self.num_states = num_states
+        self.num_actions = num_actions
+        self.alpha = alpha  # Learning rate
+        self.gamma = gamma  # Discount factor
+        self.values = np.zeros(num_states)
+
+    def update(self, state, reward, next_state):
+        # TD(0) update rule
+        td_target = reward + self.gamma * self.values[next_state]
+        td_error = td_target - self.values[state]
+        self.values[state] += self.alpha * td_error
+
+# Define SARSA agent
+class SARSAAgent:
+    def __init__(self, num_states, num_actions, alpha=0.1, gamma=0.9, epsilon=0.1):
+        self.num_states = num_states
+        self.num_actions = num_actions
+        self.alpha = alpha  # Learning rate
+        self.gamma = gamma  # Discount factor
+        self.epsilon = epsilon  # Epsilon for epsilon-greedy policy
+        self.q_values = np.zeros((num_states, num_actions))
+
+    def choose_action(self, state):
+        if np.random.rand() < self.epsilon:
+            return np.random.choice(self.num_actions)
+        else:
+            return np.argmax(self.q_values[state])
+
+    def update(self, state, action, reward, next_state, next_action):
+        # SARSA update rule
+        td_target = reward + self.gamma * self.q_values[next_state, next_action]
+        td_error = td_target - self.q_values[state, action]
+        self.q_values[state, action] += self.alpha * td_error
+
+# Define Q-Learning agent
+class QLearningAgent:
+    def __init__(self, num_states, num_actions, alpha=0.1, gamma=0.9, epsilon=0.1):
+        self.num_states = num_states
+        self.num_actions = num_actions
+        self.alpha = alpha  # Learning rate
+        self.gamma = gamma  # Discount factor
+        self.epsilon = epsilon  # Epsilon for epsilon-greedy policy
+        self.q_values = np.zeros((num_states, num_actions))
+
+    def choose_action(self, state):
+        if np.random.rand() < self.epsilon:
+            return np.random.choice(self.num_actions)
+        else:
+            return np.argmax(self.q_values[state])
+
+    def update(self, state, action, reward, next_state):
+        # Q-Learning update rule
+        td_target = reward + self.gamma * np.max(self.q_values[next_state])
+        td_error = td_target - self.q_values[state, action]
+        self.q_values[state, action] += self.alpha * td_error
+
+# Initialize environment and agents
+env = Environment()
+td_agent = TDAgent(env.num_states, len(env.actions))
+sarsa_agent = SARSAAgent(env.num_states, len(env.actions))
+q_learning_agent = QLearningAgent(env.num_states, len(env.actions))
+
+# Train agents
+num_episodes = 1000
+max_steps = 50
+
+for episode in range(num_episodes):
+    env.reset()
+    for step in range(max_steps):
+        state = env.state
+
+        # TD(0) agent
+        action = np.random.choice(env.actions)
+        next_state, reward, done = env.step(action)
+        td_agent.update(state, reward, next_state)
+
+        if done:
+            break
+
+    env.reset()
+    for step in range(max_steps):
+        state = env.state
+
+        # SARSA agent
+        action = sarsa_agent.choose_action(state)
+        next_state, reward, done = env.step(action)
+        next_action = sarsa_agent.choose_action(next_state)
+        sarsa_agent.update(state, action, reward, next_state, next_action)
+
+        if done:
+            break
+
+    env.reset()
+    for step in range(max_steps):
+        state = env.state
+
+        # Q-Learning agent
+        action = q_learning_agent.choose_action(state)
+        next_state, reward, done = env.step(action)
+        q_learning_agent.update(state, action, reward, next_state)
+
+        if done:
+            break
+
+# Evaluate performance
+num_eval_episodes = 100
+td_rewards = []
+sarsa_rewards = []
+q_learning_rewards = []
+
+for _ in range(num_eval_episodes):
+    env.reset()
+    td_total_reward = 0
+    sarsa_total_reward = 0
+    q_learning_total_reward = 0
+
+    for step in range(max_steps):
+        state = env.state
+
+        # TD(0) agent
+        action = td_agent.values[state]
+        next_state, reward, done = env.step(action)
+        td_total_reward += reward
+
+        if done:
+            break
+
+    for step in range(max_steps):
+        state = env.state
+
+        # SARSA agent
+        action = sarsa_agent.choose_action(state)
+        next_state, reward, done = env.step(action)
+        sarsa_total_reward += reward
+
+        if done:
+            break
+
+    for step in range(max_steps):
+        state = env.state
+
+        # Q-Learning agent
+        action = q_learning_agent.choose_action(state)
+        next_state, reward, done = env.step(action)
+        q_learning_total_reward += reward
+
+        if done:
+            break
+
+    td_rewards.append(td_total_reward)
+    sarsa_rewards.append(sarsa_total_reward)
+    q_learning_rewards.append(q_learning_total_reward)
+
+# Calculate average rewards
+avg_td_reward = np.mean(td_rewards)
+avg_sarsa_reward = np.mean(sarsa_rewards)
+avg_q_learning_reward = np.mean(q_learning_rewards)
+
+print(f"Average TD(0) reward: {avg_td_reward}")
+print(f"Average SARSA reward: {avg_sarsa_reward}")
+print(f"Average Q-Learning reward: {avg_q_learning_reward}")
