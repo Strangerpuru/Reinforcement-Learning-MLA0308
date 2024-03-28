@@ -1,0 +1,31 @@
+import gym
+from stable_baselines3 import PPO
+
+# Create the CartPole environment
+env = gym.make('CartPole-v1')
+
+# Initialize the PPO agent
+model = PPO("MlpPolicy", env, verbose=1)
+
+# Train the agent for 10,000 time steps
+model.learn(total_timesteps=10000)
+
+# Evaluate the trained agent
+total_rewards = []
+for _ in range(10):  # Run the evaluation 10 times
+    obs = env.reset()
+    episode_reward = 0
+    done = False
+    while not done:
+        action, _ = model.predict(obs, deterministic=True)
+        obs, reward, done, info = env.step(action)
+        episode_reward += reward
+    total_rewards.append(episode_reward)
+
+# Calculate and print the average reward
+average_reward = sum(total_rewards) / len(total_rewards)
+print("Average Reward:", average_reward)
+
+# Close the environment
+env.close()
+o
